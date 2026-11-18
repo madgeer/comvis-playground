@@ -4,7 +4,7 @@ import tensorflow as tf
 import random
 import matplotlib.pyplot as plt
 from keras.models import Model
-from keras.layers import Input, Dense, Flatten, Conv2D, MaxPooling2D, Dropout, BatchNormalization
+from keras.layers import Input, Dense, Flatten, Conv2D, MaxPooling2D, Dropout
 from keras.callbacks import ModelCheckpoint, EarlyStopping, ReduceLROnPlateau
 from keras.optimizers import Adam
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
@@ -41,11 +41,15 @@ Ye = le.fit_transform(imlabel)
 binarizer = LabelBinarizer()
 Ye_b = binarizer.fit_transform(Ye)
 
-# 4. Bagi Dataset (Train / Test)
-X_train, X_test, Y_train_b, Y_test_b, Y_train, Y_test = model_selection.train_test_split(
-    X, Ye_b, Ye, test_size=0.2, shuffle=True, stratify=Ye, random_state=SEED
+# 4. Bagi Dataset 3 arah: Train / Validation / Test
+X_train, X_temp, Y_train_b, Y_temp_b, Y_train, Y_temp = model_selection.train_test_split(
+    X, Ye_b, Ye, test_size=0.3, shuffle=True, stratify=Ye, random_state=SEED
+)
+X_val, X_test, Y_val_b, Y_test_b, Y_val, Y_test = model_selection.train_test_split(
+    X_temp, Y_temp_b, Y_temp, test_size=0.5, shuffle=True, stratify=Y_temp, random_state=SEED
 )
 
+# 5. Data Augmentation (hanya untuk training)
 datagen = ImageDataGenerator(
     rotation_range=20,
     width_shift_range=0.1,
@@ -54,10 +58,9 @@ datagen = ImageDataGenerator(
     horizontal_flip=True,
     fill_mode='nearest'
 )
-
 datagen.fit(X_train)
 
-# 5. Buat Model CNN (Functional API)
+# 6. Buat Model CNN (Functional API)
 inputs = Input(shape=(64, 64, 1))
 x = Conv2D(32, (3, 3), activation='relu')(inputs)
 x = MaxPooling2D((2, 2))(x)
@@ -75,7 +78,7 @@ model = Model(inputs=inputs, outputs=outputs)
 adam = Adam(learning_rate=0.001)
 model.compile(optimizer=adam, loss="categorical_crossentropy", metrics=['accuracy'])
 
-# 6. Proses Training
+# 7. Proses Training
 custom_plot = tp.TrainingPlot()
 
 filepath = 'weights-improv-{epoch:02d}-{val_accuracy:.2f}.keras'
@@ -104,12 +107,14 @@ reduce_lr = ReduceLROnPlateau(
 
 H = model.fit(
     datagen.flow(X_train, Y_train_b, batch_size=16),
-    validation_data=(X_test, Y_test_b),
+    validation_data=(X_val, Y_val_b),
     epochs=100,
-    callbacks=[custom_plot, checkpoint, reduce_lr]
+    callbacks=[custom_plot, checkpoint, early_stop, reduce_lr]
 )
 
-# 7. Proses Testing & Evaluasi
+model.save_weights('weights.weights.h5')
+
+# 8. Proses Testing & Evaluasi (pakai test set yang belum dilihat model)
 output = model.predict(X_test)
 y_pred_classes = np.argmax(output, axis=1)
 y_pred_labels = le.inverse_transform(y_pred_classes)
@@ -122,13 +127,13 @@ print('Akurasi')
 print(metrics.accuracy_score(y_test_labels, y_pred_labels))
 
 print('Precision')
-print(metrics.precision_score(y_test_labels, y_pred_labels, average='macro'))
+print(metrics.precision_score(y_test_labels, y_pred_labels, average='macro', zero_division=0))
 
 print('Recall')
-print(metrics.recall_score(y_test_labels, y_pred_labels, average='macro'))
+print(metrics.recall_score(y_test_labels, y_pred_labels, average='macro', zero_division=0))
 
 print('F1-Score')
-print(metrics.f1_score(y_test_labels, y_pred_labels, average='macro'))
+print(metrics.f1_score(y_test_labels, y_pred_labels, average='macro', zero_division=0))
 
 print('Confusion Matrix:')
 print(metrics.confusion_matrix(y_test_labels, y_pred_labels))
