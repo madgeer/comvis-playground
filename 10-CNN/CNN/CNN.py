@@ -3,10 +3,11 @@ import numpy as np
 import tensorflow as tf
 import random
 import matplotlib.pyplot as plt
-from tensorflow.keras.models import Model
-from tensorflow.keras.layers import Input, Dense, Flatten, Conv2D, MaxPooling2D, ZeroPadding2D, Dropout
-from tensorflow.keras.callbacks import ModelCheckpoint
-from tensorflow.keras.optimizers import Adam
+from keras.models import Model
+from keras.layers import Input, Dense, Flatten, Conv2D, MaxPooling2D, Dropout, BatchNormalization
+from keras.callbacks import ModelCheckpoint, EarlyStopping, ReduceLROnPlateau
+from keras.optimizers import Adam
+from tensorflow.keras.preprocessing.image import ImageDataGenerator
 from sklearn import model_selection
 from sklearn import metrics
 from sklearn.preprocessing import LabelBinarizer, LabelEncoder
@@ -45,12 +46,25 @@ X_train, X_test, Y_train_b, Y_test_b, Y_train, Y_test = model_selection.train_te
     X, Ye_b, Ye, test_size=0.2, shuffle=True, stratify=Ye, random_state=SEED
 )
 
+datagen = ImageDataGenerator(
+    rotation_range=20,
+    width_shift_range=0.1,
+    height_shift_range=0.1,
+    zoom_range=0.1,
+    horizontal_flip=True,
+    fill_mode='nearest'
+)
+
+datagen.fit(X_train)
+
 # 5. Buat Model CNN (Functional API)
 inputs = Input(shape=(64, 64, 1))
 x = Conv2D(32, (3, 3), activation='relu')(inputs)
 x = MaxPooling2D((2, 2))(x)
+
 x = Conv2D(64, (3, 3), activation='relu')(x)
 x = MaxPooling2D((2, 2))(x)
+
 x = Flatten()(x)
 x = Dense(128, activation='relu')(x)
 x = Dropout(0.3)(x)
@@ -73,12 +87,26 @@ checkpoint = ModelCheckpoint(
     mode='max'
 )
 
+early_stop = EarlyStopping(
+    monitor='val_loss',
+    patience=10,
+    restore_best_weights=True,
+    verbose=1
+)
+
+reduce_lr = ReduceLROnPlateau(
+    monitor='val_loss',
+    factor=0.5,
+    patience=5,
+    min_lr=1e-6,
+    verbose=1
+)
+
 H = model.fit(
-    X_train, Y_train_b,
+    datagen.flow(X_train, Y_train_b, batch_size=16),
     validation_data=(X_test, Y_test_b),
-    epochs=50,
-    batch_size=16,
-    callbacks=[custom_plot, checkpoint]
+    epochs=100,
+    callbacks=[custom_plot, checkpoint, early_stop, reduce_lr]
 )
 
 # 7. Proses Testing & Evaluasi
