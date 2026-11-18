@@ -106,7 +106,7 @@ H = model.fit(
     datagen.flow(X_train, Y_train_b, batch_size=16),
     validation_data=(X_test, Y_test_b),
     epochs=100,
-    callbacks=[custom_plot, checkpoint, early_stop, reduce_lr]
+    callbacks=[custom_plot, checkpoint, reduce_lr]
 )
 
 # 7. Proses Testing & Evaluasi
