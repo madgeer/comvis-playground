@@ -1,10 +1,10 @@
 import numpy as np
 import tensorflow as tf
 import random
-from tensorflow.keras.models import Model
-from tensorflow.keras.layers import Input, Dense, Flatten
-from tensorflow.keras.callbacks import ModelCheckpoint
-from tensorflow.keras.optimizers import Adam
+from keras.models import Model
+from keras.layers import Input, Dense, Flatten
+from keras.callbacks import ModelCheckpoint
+from keras.optimizers import Adam
 from sklearn import model_selection
 from sklearn import metrics
 from sklearn.preprocessing import LabelBinarizer, LabelEncoder

@@ -42,6 +42,7 @@ binarizer = LabelBinarizer()
 Ye_b = binarizer.fit_transform(Ye)
 
 # 4. Bagi Dataset 3 arah: Train / Validation / Test
+# 70% untuk training, 15% untuk validation, 15% untuk testing
 X_train, X_temp, Y_train_b, Y_temp_b, Y_train, Y_temp = model_selection.train_test_split(
     X, Ye_b, Ye, test_size=0.3, shuffle=True, stratify=Ye, random_state=SEED
 )
